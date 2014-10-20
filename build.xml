@@ -1,0 +1,468 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!--
+ * Copyright (c) 2001-2005 Ant-Contrib project.  All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * ====================================================================
+-->
+
+<project name="AntContrib" default="all" basedir=".">
+
+  <!-- hook for use overrides -->
+  <property file="build.properties"/>
+
+  <property name="build"   location="build" />
+  <property name="src"     location="src" />
+  <property name="manual"  location="manual" />
+  <property name="test"    location="test" />
+
+  <property name="dist"     location="${build}/dist" />
+  <property name="dist.src" location="${build}/dist/src" />
+  <property name="dist.bin" location="${build}/dist/bin" />
+  <property name="lib"      location="${build}/lib" />
+  <property name="docs"     location="${build}/docs" />
+  <property name="api"      location="${build}/docs/api" />
+  <property name="classes"  location="${build}/classes" />
+
+  <property name="javac.debug" value="true"/>
+  <property name="javac.target" value="1.1"/>
+  <property name="javac.source" value="1.3"/>
+
+  <property name="zip.prefix" value="ant-contrib/" />
+
+  <property name="testsrc" location="${test}/src"/>
+  <property name="testlib" location="${test}/lib"/>
+  <property name="testres" location="${test}/resources"/>
+  <property name="testclasses" location="${test}/classes"/>
+
+  <property name="runlib" location="lib"/>
+
+  <property name="dist.base" value="ant-contrib-${version}" />
+  <!-- jar.name and only jar.name must be used in manifest.  contrib.jar will not work-->
+  <property name="jar.name"  value="ant-contrib.jar"/>
+  <property name="contrib.jar" location="${lib}/${jar.name}"/>
+  <property name="jar.main.class" value="net.sf.antcontrib.AntContribVersion"/>
+
+  <!--
+  ######################################################
+  ### Build the class and jar file target directories
+  ######################################################
+  -->
+  <target name="build_dirs">
+    <mkdir dir="${classes}" />
+    <mkdir dir="${lib}" />
+    <mkdir dir="${runlib}" />
+  </target>
+
+  <!--
+  ######################################################
+  ### Build the documentation directories
+  ######################################################
+  -->
+  <target name="doc_dirs">
+    <mkdir dir="${docs}" />
+    <mkdir dir="${api}" />
+  </target>
+
+  <!--
+  ######################################################
+  ### Build the documentation directories
+  ######################################################
+  -->
+  <target name="dist_dirs">
+    <mkdir dir="${dist}" />
+  </target>
+
+  <!--
+  ######################################################
+  ### Build the javadoc documentation
+  ######################################################
+  -->
+  <target name="build_docs" depends="doc_dirs">
+    <javadoc sourcepath="${src}"
+             destdir="${api}"
+             packagenames="net.sf.antcontrib.*"
+             author="true"
+             version="true"
+             windowtitle="Ant Contrib">
+      <tag name="ant.task" enabled="false" description="Task:" scope="types"/>
+      <tag name="ant.datatype" enabled="false"
+           description="Data type:" scope="types"/>
+      <tag name="ant.attribute" enabled="false"
+           description="Attribute:" scope="types"/>
+      <tag name="ant.attribute.group" enabled="false"
+           description="Attribute group:" scope="types"/>
+      <tag name="ant.element" enabled="false"
+           description="Nested element:" scope="types"/>
+    </javadoc>
+    <copy todir="${docs}">
+      <fileset dir="${manual}"/>
+    </copy>
+  </target>
+
+  <target name="check-version">
+    <available property="jdk1.4+" classname="java.lang.CharSequence"/>
+    <available property="jdk1.5+" classname="java.lang.Readable"/>
+  </target>
+
+  
+  <target name="check-ant-version">
+    <available property="ant-1.6+" classname="org.apache.tools.ant.taskdefs.MacroDef"/>
+  </target>
+
+  <!--
+  ######################################################
+  ### Build the ant-contrib jar file
+  ######################################################
+  -->
+  <target name="build_contrib_jar"
+          depends="build_dirs,check-version,check-ant-version,get-jar-deps">
+    <!-- if this is not an official release, any other developer that builds will build a jar
+         with version=Developer-build -->
+    <property name="version" value="Developer-build(no-version)"/>
+
+    <fail unless="ant-1.6+" message="Ant-Contrib requires Ant 1.6+ to build" />
+    <javac srcdir="${src}"
+           debug="${javac.debug}"
+           target="${javac.target}"
+           source="${javac.source}"
+           destdir="${classes}">
+        <classpath>
+            <fileset refid="run.libs" />
+        </classpath>
+    </javac>
+
+    <copy todir="${classes}">
+      <fileset dir="${src}">
+        <include name="**/*.properties" />
+        <include name="**/*.xml" />
+      </fileset>
+    </copy>
+
+    <!--generate a manifest-->
+    <manifest file="${lib}/MANIFEST.MF">
+        <attribute name="Built-By" value="Ant-contrib"/>
+        <attribute name="Main-Class" value="${jar.main.class}"/>
+        <attribute name="Class-Path" value="${jar.name}"/>
+        <!--attribute name="Specification-Title" value="${spec.title}"/>
+        <attribute name="Specification-Version" value="${spec.version}"/>
+        <attribute name="Specification-Vendor" value="${spec.vendor}"/-->
+        <attribute name="Implementation-Title" value="Ant-contrib"/>
+        <attribute name="Implementation-Version" value="${version} ${TODAY}"/> 
+        <attribute name="Implementation-Vendor" value="http://sourceforge.net/projects/ant-contrib"/>
+    </manifest>
+
+
+    <jar jarfile="${contrib.jar}" manifest="${lib}/MANIFEST.MF">
+      <fileset dir="${classes}">
+        <include name="**/*.class" />
+        <include name="**/*.properties" />
+        <include name="**/*.xml" />
+      </fileset>
+    </jar>
+  </target>
+
+  <!--
+  ######################################################
+  ### Build the library
+  ######################################################
+  -->
+  <target name="jar" depends="build_contrib_jar" />
+
+  <!--
+  ######################################################
+  ### Build the documentation
+  ######################################################
+  -->
+  <target name="docs" depends="build_docs"/>
+
+  <!--
+  ######################################################
+  ### Clean all derived files
+  ######################################################
+  -->
+  <target name="clean">
+    <delete dir="${classes}"/>
+    <delete dir="${lib}"/>
+    <delete dir="${dist}"/>
+    <delete dir="${docs}"/>
+    <delete dir="${testclasses}"/>
+  </target>
+
+  <!--
+  ######################################################
+  ### Build All Targets
+  ######################################################
+  -->
+  <target name="all" depends="jar,docs"/>
+
+  <!--
+  ######################################################
+  ### Prepares source distribution
+  ######################################################
+  -->
+  <target name="src_dist" depends="dist_dirs">
+    <mkdir dir="${dist.src}"/>
+    <copy todir="${dist.src}">
+      <fileset dir=".">
+        <exclude name="build.properties"/>
+        <exclude name="build/**" />
+      </fileset>
+    </copy>
+  </target>
+
+  <!--
+  ######################################################
+  ### Prepares binary distribution
+  ######################################################
+  -->
+  <target name="bin_dist" depends="dist_dirs,all">
+    <mkdir dir="${dist.bin}"/>
+    <mkdir dir="${dist.bin}/lib"/>
+    <mkdir dir="${dist.bin}/docs"/>
+    <copy todir="${dist.bin}/lib" file="${contrib.jar}"/>
+    <copy todir="${dist.bin}/docs">
+      <fileset dir="${docs}"/>
+    </copy>
+    <copy todir="${dist.bin}">
+      <fileset dir=".">
+        <include name="README.txt"/>
+      </fileset>
+    </copy>
+  </target>
+
+  <!--
+  ######################################################
+  ### Prepares binary distribution
+  ######################################################
+  -->
+  <target name="prepare_dist" depends="src_dist,bin_dist"/>
+
+  <!--
+  ######################################################
+  ### Build the src and bin distribution in ZIP archive
+  ######################################################
+  -->
+  <target name="dist-zip" depends="prepare_dist">
+    <!-- Binary distribution -->
+    <zip zipfile="${dist}/${dist.base}-bin.zip">
+        <zipfileset prefix="${zip.prefix}" dir="${dist.bin}" />
+    </zip>
+
+    <!-- Source distribution -->
+    <zip zipfile="${dist}/${dist.base}-src.zip">
+      <zipfileset prefix="${zip.prefix}" dir="${dist.src}" />
+    </zip>
+  </target>
+
+  <!--
+  ######################################################
+  ### Build the src and bin distributions in TAR.GZ archive
+  ######################################################
+  -->
+  <target name="dist-tar" depends="prepare_dist">
+    <!-- Binary distribution -->
+    <tar tarfile="${dist}/${dist.base}-bin.tar">
+        <tarfileset dir="${dist.bin}" prefix="${zip.prefix}"/>
+    </tar>
+    <gzip zipfile="${dist}/${dist.base}-bin.tar.gz"
+          src="${dist}/${dist.base}-bin.tar" />
+    <bzip2 zipfile="${dist}/${dist.base}-bin.tar.bz2"
+           src="${dist}/${dist.base}-bin.tar" />
+    <delete>
+      <fileset dir="${dist}"
+               includes="${dist.base}-bin.tar" />
+    </delete>
+
+    <!-- Source distribution -->
+    <tar tarfile="${dist}/${dist.base}-src.tar">
+        <tarfileset dir="${dist.src}" prefix="${zip.prefix}" />
+    </tar>
+    <gzip zipfile="${dist}/${dist.base}-src.tar.gz"
+          src="${dist}/${dist.base}-src.tar" />
+    <bzip2 zipfile="${dist}/${dist.base}-src.tar.bz2"
+           src="${dist}/${dist.base}-src.tar" />
+    <delete>
+      <fileset dir="${dist}"
+               includes="${dist.base}-src.tar" />
+    </delete>
+
+  </target>
+
+  <!--
+  ######################################################
+  ### Complete dist with checksums
+  ######################################################
+  -->
+  <target name="dist" depends="dist-zip,dist-tar">
+    <checksum fileext=".md5">
+      <fileset dir="${dist}">
+        <include name="*.zip"/>
+        <include name="*.tar.*"/>
+      </fileset>
+    </checksum>
+  </target>
+
+  <!--
+  ######################################################
+  ### Compile the tests
+  ######################################################
+  -->
+  <target name="compile-tests" depends="build_contrib_jar,get-test-deps">
+    <mkdir dir="${testclasses}"/>
+    <javac srcdir="${testsrc}" destdir="${testclasses}"
+           debug="${javac.debug}" target="${javac.target}"
+           source="${javac.source}">
+      <classpath>
+        <pathelement location="${contrib.jar}"/>
+        <fileset refid="test.libs" />
+        <fileset refid="run.libs" />
+      </classpath>
+    </javac>
+  </target>
+
+  <target name="run-test" depends="compile-tests">
+    <junit haltonfailure="false" haltonerror="false"
+           errorproperty="junit.error" failureproperty="junit.failure">
+      <formatter type="brief" usefile="false"/>
+      <batchtest>
+        <fileset dir="${testclasses}" excludes="${skip-tests}">
+          <exclude name="**/antclipse/**" unless="eclipse.present"/>
+        </fileset>
+      </batchtest>
+      <sysproperty key="antcontrib.jar" file="${contrib.jar}"/>
+      <classpath>
+        <pathelement location="${contrib.jar}"/>
+        <pathelement location="${testclasses}"/>
+        <fileset refid="test.libs" />
+        <fileset refid="run.libs" />
+      </classpath>
+    </junit>
+
+      <fail message="JUnit error (${junit.error}) encountered." if="junit.error" />
+      <fail message="JUnit failure (${junit.failure}) encountered." if="junit.failure" />
+  </target>
+
+  <target name="test-all" depends="compile-tests">
+      <antcall target="run-test">
+          <param name="skip-tests" value="**/BuildFileTestBase.class"/>
+      </antcall>
+  </target>
+
+
+  <target name="gump-safe-test" depends="compile-tests">
+      <!--   all AntServerTest tests started failing on Gump 
+             with IOException at 2004-12-06T15:00:16 
+            after successfully completing at 2004-12-06T03:00:19 -->
+      <antcall target="run-test">
+          <param name="skip-tests" value="**/AntServerTest.class **/BuildFileTest*.class"/>
+      </antcall>
+  </target>
+  
+  <target name="test" depends="gump-safe-test"/>
+
+  <target name="get-jar-deps">
+      <antcall target="get-dep-maybe">
+          <param name="dep.src" value="http://www.ibiblio.org/maven/bcel/jars/bcel-5.1.jar" />
+          <param name="dep.dest" value="${runlib}/bcel-5.1.jar" />
+      </antcall>
+
+      <fileset id="run.libs" dir="${runlib}">
+          <include name="*.jar" />
+          <include name="*.zip" />
+      </fileset>
+  </target>
+
+  <target name="build-ant-testutil" unless="ant.build.testutil.available">
+    <unzip src="${build.ant.dir}/${ant.src.file}"
+             dest="${build.ant.dir}">
+          <patternset>
+              <include name="${ant.unzip.dir}/src/testcases/org/apache/tools/ant/BuildFileTest.java"/>
+          </patternset>
+    </unzip>
+
+    <mkdir dir="${testclasses}" />
+    <javac srcdir="${build.ant.dir}/${ant.unzip.dir}/src/testcases"
+           includes="org/apache/tools/ant/BuildFileTest.java"
+           destdir="${testclasses}" source="${javac.source}"
+           debug="${javac.debug}" target="${javac.target}" includeantruntime="yes">
+      <classpath>
+        <pathelement location="${contrib.jar}"/>
+        <fileset refid="test.libs" />
+        <fileset refid="run.libs" />
+      </classpath>
+    </javac>
+  </target>
+
+  <target name="get-ant-testutil" unless="ant.testutil.available">
+      <property name="build.ant.dir"
+                value="build/ant" />
+      <property name="ant.download.version"
+                value="1.6.2" />
+      <property name="ant.src.file"
+                value="apache-ant-${ant.download.version}-src.zip" />
+      <property name="ant.unzip.dir"
+                value="apache-ant-${ant.download.version}" />
+
+      <mkdir dir="${build.ant.dir}" />
+
+      <get dest="${build.ant.dir}/${ant.src.file}"
+           usetimestamp="true"
+           src="http://archive.apache.org/dist/ant/source/${ant.src.file}">
+      </get>
+
+      <available property="ant.build.testutil.available"
+                 file="${build.ant.dir}/${ant.unzip.dir}/build/lib/ant-testutil.jar" />
+
+      <antcall target="build-ant-testutil"
+               inheritall="true" />
+
+  </target>
+
+  <target name="get-dep" unless="dep.available">
+      <get dest="${dep.dest}"
+           usetimestamp="true"
+           src="${dep.src}">
+      </get>
+  </target>
+
+  <target name="get-dep-maybe">
+      <available file="${dep.dest}" property="dep.available" />
+      <antcall target="get-dep" inheritall="true" />
+  </target>
+
+  <target name="get-test-deps" depends="get-jar-deps">
+
+      <mkdir dir="${testlib}"/>
+      <property name="junit.jar.location" value="${testlib}/junit-3.8.1.jar"/>
+
+      <antcall target="get-dep-maybe">
+          <param name="dep.src" value="http://www.ibiblio.org/maven/junit/jars/junit-3.8.1.jar" />
+          <param name="dep.dest" value="${junit.jar.location}" />
+      </antcall>
+
+      <fileset id="test.libs" dir="${testlib}">
+          <include name="*.jar" />
+          <include name="*.zip" />
+      </fileset>
+
+      <property name="testutil.jar.location" 
+                value="${testlib}/ant-testutil.jar"/>
+      <available property="ant.testutil.available"
+                 file="${testutil.jar.location}" />
+      <antcall target="get-ant-testutil" />
+
+  </target>
+
+</project>
+
